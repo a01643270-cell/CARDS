@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/card_model.dart';
 import '../services/deck_service.dart';
+import 'game_over_screen.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -11,18 +13,53 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
+  late DeckService deck;
   late PlayingCard currentCard;
+
   int score = 0;
-  String resultMessage = '';
+  int highScore = 0;
 
   @override
   void initState() {
     super.initState();
-    currentCard = DeckService.generateRandomCard();
+
+    loadHighScore();
+    startGame();
+  }
+
+  Future<void> loadHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      highScore = prefs.getInt('highScore') ?? 0;
+    });
+  }
+
+  Future<void> saveHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setInt('highScore', highScore);
+  }
+
+  void startGame() {
+    deck = DeckService();
+    currentCard = deck.drawCard();
+    score = 0;
+
+    setState(() {});
   }
 
   void guess(bool higher) {
-    final nextCard = DeckService.generateRandomCard();
+    if (deck.remainingCards() == 0) {
+      showGameOver(
+        currentCard,
+        currentCard,
+        higher,
+      );
+      return;
+    }
+
+    final nextCard = deck.drawCard();
 
     bool isCorrect;
 
@@ -32,17 +69,50 @@ class _GameScreenState extends State<GameScreen> {
       isCorrect = nextCard.value <= currentCard.value;
     }
 
-    setState(() {
-      currentCard = nextCard;
-
-      if (isCorrect) {
+    if (isCorrect) {
+      setState(() {
+        currentCard = nextCard;
         score++;
-        resultMessage = 'Correct!';
-      } else {
-        score = 0;
-        resultMessage = 'Wrong!';
-      }
-    });
+
+        if (score > highScore) {
+          highScore = score;
+          saveHighScore();
+        }
+      });
+    } else {
+      showGameOver(
+        currentCard,
+        nextCard,
+        higher,
+      );
+    }
+  }
+
+  void showGameOver(
+    PlayingCard previousCard,
+    PlayingCard revealedCard,
+    bool guessedHigher,
+  ) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GameOverScreen(
+          score: score,
+          highScore: highScore,
+          previousCard: previousCard,
+          revealedCard: revealedCard,
+          guessedHigher: guessedHigher,
+          onRestart: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const GameScreen(),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   Color getCardColor() {
@@ -73,6 +143,24 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
 
+            const SizedBox(height: 10),
+
+            Text(
+              'High Score: $highScore',
+              style: const TextStyle(
+                fontSize: 22,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            Text(
+              'Cards Remaining: ${deck.remainingCards()}',
+              style: const TextStyle(
+                fontSize: 18,
+              ),
+            ),
+
             const SizedBox(height: 40),
 
             Container(
@@ -98,16 +186,7 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
 
-            const SizedBox(height: 40),
-
-            Text(
-              resultMessage,
-              style: const TextStyle(
-                fontSize: 28,
-              ),
-            ),
-
-            const SizedBox(height: 40),
+            const SizedBox(height: 50),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,

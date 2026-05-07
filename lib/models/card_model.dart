@@ -8,4 +8,9 @@ class PlayingCard {
     required this.rank,
     required this.value,
   });
+
+  @override
+  String toString() {
+    return '$rank$suit';
+  }
 }

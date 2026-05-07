@@ -14,10 +14,17 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late DeckService deck;
+
   late PlayingCard currentCard;
+
+  PlayingCard? incomingCard;
 
   int score = 0;
   int highScore = 0;
+
+  bool isAnimating = false;
+
+  double incomingCardTop = -400;
 
   @override
   void initState() {
@@ -43,23 +50,42 @@ class _GameScreenState extends State<GameScreen> {
 
   void startGame() {
     deck = DeckService();
+
     currentCard = deck.drawCard();
+
     score = 0;
 
     setState(() {});
   }
 
-  void guess(bool higher) {
+  Future<void> guess(bool higher) async {
+    if (isAnimating) return;
+
     if (deck.remainingCards() == 0) {
       showGameOver(
         currentCard,
         currentCard,
         higher,
       );
+
       return;
     }
 
     final nextCard = deck.drawCard();
+
+    setState(() {
+      incomingCard = nextCard;
+      incomingCardTop = -400;
+      isAnimating = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    setState(() {
+      incomingCardTop = 0;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 700));
 
     bool isCorrect;
 
@@ -72,12 +98,17 @@ class _GameScreenState extends State<GameScreen> {
     if (isCorrect) {
       setState(() {
         currentCard = nextCard;
+
+        incomingCard = null;
+
         score++;
 
         if (score > highScore) {
           highScore = score;
           saveHighScore();
         }
+
+        isAnimating = false;
       });
     } else {
       showGameOver(
@@ -115,12 +146,44 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Color getCardColor() {
-    if (currentCard.suit == '♥' || currentCard.suit == '♦') {
+  Color getCardColor(String suit) {
+    if (suit == '♥' || suit == '♦') {
       return Colors.red;
     }
 
     return Colors.white;
+  }
+
+  Widget buildCard(PlayingCard card) {
+    return Container(
+      width: 180,
+      height: 260,
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white,
+          width: 3,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          '${card.rank}${card.suit}',
+          style: TextStyle(
+            fontSize: 64,
+            fontWeight: FontWeight.bold,
+            color: getCardColor(card.suit),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -129,12 +192,14 @@ class _GameScreenState extends State<GameScreen> {
       appBar: AppBar(
         title: const Text('Higher or Lower'),
         centerTitle: true,
+        backgroundColor: Colors.transparent,
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const SizedBox(height: 20),
+
             Text(
               'Score: $score',
               style: const TextStyle(
@@ -147,8 +212,9 @@ class _GameScreenState extends State<GameScreen> {
 
             Text(
               'High Score: $highScore',
-              style: const TextStyle(
-                fontSize: 22,
+              style: TextStyle(
+                fontSize: 20,
+                color: Colors.grey[300],
               ),
             ),
 
@@ -156,51 +222,65 @@ class _GameScreenState extends State<GameScreen> {
 
             Text(
               'Cards Remaining: ${deck.remainingCards()}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
+                color: Colors.grey[400],
               ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 60),
 
-            Container(
-              width: 180,
-              height: 260,
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white,
-                  width: 3,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  '${currentCard.rank}${currentCard.suit}',
-                  style: TextStyle(
-                    fontSize: 64,
-                    fontWeight: FontWeight.bold,
-                    color: getCardColor(),
-                  ),
-                ),
+            SizedBox(
+              width: 220,
+              height: 320,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  buildCard(currentCard),
+
+                  if (incomingCard != null)
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeInOut,
+                      top: incomingCardTop,
+                      child: buildCard(incomingCard!),
+                    ),
+                ],
               ),
             ),
 
-            const SizedBox(height: 50),
+            const Spacer(),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton(
-                  onPressed: () => guess(false),
-                  child: const Text('Lower'),
+                SizedBox(
+                  width: 140,
+                  height: 60,
+                  child: ElevatedButton(
+                    onPressed: () => guess(false),
+                    child: const Text(
+                      'Lower',
+                      style: TextStyle(fontSize: 20),
+                    ),
+                  ),
                 ),
-                ElevatedButton(
-                  onPressed: () => guess(true),
-                  child: const Text('Higher'),
+
+                SizedBox(
+                  width: 140,
+                  height: 60,
+                  child: ElevatedButton(
+                    onPressed: () => guess(true),
+                    child: const Text(
+                      'Higher',
+                      style: TextStyle(fontSize: 20),
+                    ),
+                  ),
                 ),
               ],
             ),
+
+            const SizedBox(height: 40),
           ],
         ),
       ),

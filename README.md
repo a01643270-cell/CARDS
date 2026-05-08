@@ -1,17 +1,32 @@
 # cards
 
-A new Flutter project.
+Movile game where players have to guess if the next card will be higher or lower than the previous ones
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- Real 52-card deck, no repeated cards
+- High score system
+- Sound effects and particles for victory/defeat
+- Game over screen
 
-A few resources to get you started if this is your first Flutter project:
+## Gameplay
+- A card is displayed on screen
+- Player guesses if the next card is higher or lower
+- A new card slides onto the screen
+if the guess is right
+- +1 point
+- new attempt
+if the guess is wrong
+- Game over
+- Both cards are displayed
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Built with
+- Flutter
+- Dart
+- Shared preferences
+- Audioplayers
+- Confetti
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Instalation 
+Clone this repository
+https://github.com/a01643270-cell/CARDS.git
